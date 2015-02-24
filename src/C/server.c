@@ -29,10 +29,11 @@
 #include <helper.h>
 #include <config.h>
 #include "http_handler.h"
-#define ARGS_NUM 1
+#define ARGS_NUM 2
 #define MAX_LINE 128
 #define MAX_QUEUE_SIZE 100
 #define MAX_THREAD_NUM  10 
+char *path;
 void handle_conn(void*);
 typedef struct queue{
     int socket_fd[MAX_QUEUE_SIZE];
@@ -172,6 +173,7 @@ int main(int argc, char **argv)
         error_log("%s", "Port must be in range 1024 to 65535");
         exit(EXIT_FAILURE);
     }
+    path = argv[2];
 
     /* Create a socket for listening */
     if ((serv_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
