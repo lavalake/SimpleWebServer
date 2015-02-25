@@ -1,6 +1,10 @@
+extern char *path;
 typedef struct response{
         int http_method; // 0 for get, 1 for Head, 2 for others
             char *file_name;
 } HTTPRSP;
 void parseRequest(int fd,char *request);
-void sendRsp(int fd,HTTPRSP rsp);
+void handleStatic(int fd,HTTPRSP rsp);
+void handleDyn(int fd,HTTPRSP rsp,char *args);
+void sendRspHeader(int fd,HTTPRSP rsp);
+void send_error_rsp(int fd,char *err);
