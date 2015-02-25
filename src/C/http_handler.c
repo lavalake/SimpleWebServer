@@ -168,7 +168,7 @@ void handleStatic(int fd,HTTPRSP rsp){
            send_len = send(fd,file_buf+total_send,read_length-total_send,0);
            if(send_len <= 0){
                //there is some error occur or client close the connection
-               printf("send error %d\n",send_len);
+               printf("send error %d\n",errno);
                break;
            }else{
                //printf("send %d \n",send_len);
