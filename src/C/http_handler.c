@@ -57,13 +57,12 @@ void parseRequest(int fd, char *request){
     if (strcasecmp(method, "GET") == 0){
       rsp.http_method = 0;
     }
-    else if (strcasecmp(method, "HEAD") == 0){
-        rsp.http_method = 1;
+    else if (strcasecmp(method, "HEAD")){
+      rsp.http_method = 1;
     }
     else{
       //501 error
       printf("%s\n", "501 Method Unimplemented");
-      return;
     }
     
     printf("%s\n", "printing out the method");
@@ -73,30 +72,9 @@ void parseRequest(int fd, char *request){
 
     strcpy(rsp.file_name,path);
     path_len = strlen(path);
+    strcpy(rsp.file_name+path_len, uri);
     
-    //parse URI from request to determine static status or cgi
-    char *index; 
-    char cgiargs[BUF_SIZE];
-    if (strstr(uri, "cgi-bin")){
-        //Dynamic cgi content
-        printf("%s\n", "dynamic content");
-        index = strchr(uri, '?');
-        if (index){
-            strcpy(cgiargs, index + 1);
-            *index = '\0';
-        }
-        else
-            strcpy(cgiargs, "");
-        strcpy(rsp.file_name + path_len, uri);
-        handleDyn(fd, rsp, cgiargs);
-    }
-    else{
-        //static content
-        printf("%s\n", "static content");
-        strcpy(rsp.file_name + path_len, uri);
-        handleStatic(fd, rsp);
-    }
-    
+    handleStatic(fd, rsp);
 }
 
 
@@ -107,6 +85,7 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     int total=0;
     int total_sent=0,bytes_sent=0;
     char *file_type;
+    //struct stat stat_buf;
     strcpy(header,ok_rsp);
     total = strlen(header);
     strcpy(header+total,server_info);
@@ -129,6 +108,21 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     printf("file type %s\n",file_type);
     strcpy(header+total,file_type);
     total = strlen(header);
+    strcpy(header+total,"\r\n");
+    total += 2;
+    /*
+    if(stat(rsp.file_name,&stat_buf) == 0){
+        char str[100];
+        sprintf(str, " %d" , (int)stat_buf.st_size);
+        strcpy(header+total,content_len);
+        total = strlen(header);
+        strcpy(header+total,str);
+        total = strlen(header);
+        strcpy(header+total,"\r\n");
+        total += 2;
+        printf("conten len %s\n",str);
+    }
+*/
     strcpy(header+total,"\r\n");
     total += 2;
     printf("rsp header %s\n",header);

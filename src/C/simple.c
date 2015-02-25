@@ -76,7 +76,6 @@ void handle_conn(void *input){
     fd_set read_set;
     struct timeval t;
     int result;
-    
     printf("thread %d run\n", *(int*)input);
     while(1){
         pthread_mutex_lock(&jq.qmutex);
