@@ -45,6 +45,8 @@ static char content_type[] = "Content-type: ";
 void parseRequest(int fd, char *request){
 
     HTTPRSP rsp;
+
+	  char method[BUF_SIZE], uri[BUF_SIZE];
     char *buf = (char*) malloc(BUF_SIZE);
     rsp.file_name = (char*) malloc(BUF_SIZE);
 
