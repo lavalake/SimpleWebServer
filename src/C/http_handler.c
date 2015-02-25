@@ -25,7 +25,7 @@
 #define BUF_SIZE 1024
 // static char default_page[] = "index.html";
 #define PATH "../reference/www/"
-static char default_page[] = "index.html";
+//static char default_page[] = "index.html";
 #define HTTPGET 0
 #define HTTPHEAD 1
 #define HTTPOTHER 2
