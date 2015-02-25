@@ -72,18 +72,10 @@ void parseRequest(int fd, char *request){
 
     strcpy(rsp.file_name, uri);
     
-    sendRsp(fd, rsp);
+    handleStatic(fd, rsp);
 }
 
 
-void sendRsp(int fd,HTTPRSP rsp){
-    int path_len=0;
-    rsp.file_name = (char*)malloc(URLLEN);
-    strcpy(rsp.file_name,path);
-    path_len = strlen(path);
-    strcpy(rsp.file_name+path_len,default_page);
-    handleStatic(fd,rsp);
-}
 void sendRspHeader(int fd,HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
     int total=0;
