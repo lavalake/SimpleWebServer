@@ -53,10 +53,13 @@ void parseRequest(int fd, char *request){
     char *buf = (char*) malloc(BUF_SIZE);
     if(buf == NULL){
         printf("malloc failed\n");
+        return;
     }
     rsp.file_name = (char*) malloc(BUF_SIZE);
     if(rsp.file_name == NULL){
         printf("malloc failed\n");
+        free(buf);
+        return;
     }
 
     //split the request content by "\r\n"
@@ -155,6 +158,7 @@ void handleStatic(int fd,HTTPRSP rsp){
     if(stat(rsp.file_name,&stat_buf) != 0){
         printf("file not exist\n");
         send_error_rsp(fd,error_not_found);
+        free(rsp.file_name);
         return;
     }
     sendRspHeader(fd,rsp);
@@ -186,6 +190,8 @@ void handleStatic(int fd,HTTPRSP rsp){
            }
        }
     }
+    close(read_fd);
+    free(rsp.file_name);
 
 }
 void handleDyn(int fd,HTTPRSP rsp, char *args){
