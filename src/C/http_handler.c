@@ -32,7 +32,7 @@ static char error_bad[] = {"HTTP/1.0 400 Bad Request\r\n"
     "Content-type: text/html\r\n\r\n"
     "<html><body>Error</body></html>\r\n\r\n"};
     */
-static char error_not_found[] = {"HTTP/1.0 4.4 Not Found"
+static char error_not_found[] = {"HTTP/1.0 404 Not Found"
     "Content-type: text/html\r\n\r\n"
     "<html><body>Page Not Found</body></html>\r\n\r\n"};
 static char error_unsupport[] = {"HTTP/1.0 501 Method Unimplemented"
@@ -50,6 +50,10 @@ void parseRequest(int fd, char *request){
     int path_len=0;
 
 	  char method[BUF_SIZE], uri[BUF_SIZE];
+    if(request == NULL){
+        printf("null http request\n");
+        return;
+    }
     char *buf = (char*) malloc(BUF_SIZE);
     if(buf == NULL){
         printf("malloc failed\n");
