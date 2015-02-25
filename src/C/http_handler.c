@@ -22,7 +22,7 @@
 #include <helper.h>
 #define URLLEN 200 //max URL length
 #define RSP_HEADER_LEN 65
-#define BUF_SIZE 1024
+#define BUF_SIZE 4096
 static char default_page[] = "/index.html";
 #define HTTPGET 0
 #define HTTPHEAD 1
@@ -154,8 +154,10 @@ void handleStatic(int fd,HTTPRSP rsp){
            send_len = send(fd,file_buf+total_send,read_length-total_send,0);
            if(send_len <= 0){
                //there is some error occur or client close the connection
+               printf("send error\n");
                break;
            }else{
+               printf("send %d \n",send_len);
                total_send += send_len;
            }
        }
