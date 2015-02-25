@@ -23,9 +23,7 @@
 #define URLLEN 200 //max URL length
 #define RSP_HEADER_LEN 65
 #define BUF_SIZE 1024
-// static char default_page[] = "index.html";
-#define PATH "../reference/www/"
-//static char default_page[] = "index.html";
+static char default_page[] = "/index.html";
 #define HTTPGET 0
 #define HTTPHEAD 1
 #define HTTPOTHER 2
@@ -45,6 +43,7 @@ static char content_type[] = "Content-type: ";
 void parseRequest(int fd, char *request){
 
     HTTPRSP rsp;
+    int path_len=0;
 
 	  char method[BUF_SIZE], uri[BUF_SIZE];
     char *buf = (char*) malloc(BUF_SIZE);
@@ -55,8 +54,8 @@ void parseRequest(int fd, char *request){
     printf("%s\n", buf);
     sscanf(buf, "%s %s", method, uri);
 
-    if (strcasecmp(method, "GET")){
-        rsp.http_method = 0;
+    if (strcasecmp(method, "GET") == 0){
+      rsp.http_method = 0;
     }
     else if (strcasecmp(method, "HEAD")){
         rsp.http_method = 1;
@@ -71,6 +70,10 @@ void parseRequest(int fd, char *request){
     printf("%d\n", rsp.http_method);
     printf("%s\n", "this is going to be the filename");
     printf("%s\n", uri);
+
+    strcpy(rsp.file_name,path);
+    path_len = strlen(path);
+    strcpy(rsp.file_name+path_len, uri);
     
     //parse URI from request to determine static status or cgi
     char *index = NULL; 
@@ -98,6 +101,8 @@ void parseRequest(int fd, char *request){
 
 void sendRspHeader(int fd,HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
+    char *root;
+    int path_len;
     int total=0;
     int total_sent=0,bytes_sent=0;
     char *file_type;
@@ -107,7 +112,19 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     total = strlen(header);
     strcpy(header+total,content_type);
     total = strlen(header);
+    printf("file name %s\n",rsp.file_name);
+    path_len = strlen(path);
+    root = (char*) malloc(path_len+2);
+    strcpy(root,path);
+    strcpy(root+path_len,"/"); 
+    if(strcmp(rsp.file_name,root) == 0){
+        int path_len = strlen(path);
+        strcpy(rsp.file_name,path);
+        strcpy(rsp.file_name+path_len,default_page);
+        printf("chage to default file %s\n",rsp.file_name);
+    }
     file_type = get_mime(rsp.file_name);
+    
     printf("file type %s\n",file_type);
     strcpy(header+total,file_type);
     total = strlen(header);
@@ -136,11 +153,13 @@ void handleStatic(int fd,HTTPRSP rsp){
     sendRspHeader(fd,rsp);
 
     if(rsp.http_method == HTTPHEAD){
+        printf("http head, just return");
         return;
     }    
     printf("file name %s\n",rsp.file_name);
     
     if(stat(rsp.file_name,&stat_buf) != 0){
+        printf("file not exist\n");
         send_error_rsp(fd,error_not_found);
         return;
     }
@@ -149,6 +168,7 @@ void handleStatic(int fd,HTTPRSP rsp){
     while(total_len < stat_buf.st_size){
        int total_send = 0;
        read_length = read(read_fd,file_buf,BUF_SIZE);
+       printf("read %d from file\n",read_length);
        total_len += read_length;
        while(total_send < read_length){
            int send_len = 0;
@@ -161,7 +181,6 @@ void handleStatic(int fd,HTTPRSP rsp){
            }
        }
     }
-    close(read_fd);
 
 }
 void handleDyn(int fd,HTTPRSP rsp, char *args){
