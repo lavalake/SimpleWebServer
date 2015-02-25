@@ -73,7 +73,6 @@ void parseRequest(int fd, char *request){
 
     strcpy(rsp.file_name,path);
     path_len = strlen(path);
-    strcpy(rsp.file_name+path_len, uri);
     
     //parse URI from request to determine static status or cgi
     char *index; 
@@ -88,13 +87,13 @@ void parseRequest(int fd, char *request){
         }
         else
             strcpy(cgiargs, "");
-        strcpy(rsp.file_name, uri);
+        strcpy(rsp.file_name + path_len, uri);
         handleDyn(fd, rsp, cgiargs);
     }
     else{
         //static content
         printf("%s\n", "static content");
-        strcpy(rsp.file_name, uri);
+        strcpy(rsp.file_name + path_len, uri);
         handleStatic(fd, rsp);
     }
     
