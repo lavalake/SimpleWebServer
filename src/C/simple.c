@@ -34,6 +34,7 @@
 #define MAX_QUEUE_SIZE 100
 #define MAX_THREAD_NUM  10 
 char *path;
+char *root;
 void handle_conn(void*);
 typedef struct queue{
     int socket_fd[MAX_QUEUE_SIZE];
@@ -76,7 +77,6 @@ void handle_conn(void *input){
     fd_set read_set;
     struct timeval t;
     int result;
-    
     printf("thread %d run\n", *(int*)input);
     while(1){
         pthread_mutex_lock(&jq.qmutex);
@@ -174,6 +174,9 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     path = argv[2];
+    root = (char*)malloc(strlen(path)+1);
+    strcpy(root,path);
+    strcpy(root+strlen(root),"/");
 
     /* Create a socket for listening */
     if ((serv_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {

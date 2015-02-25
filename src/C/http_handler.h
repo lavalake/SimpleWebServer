@@ -1,4 +1,5 @@
 extern char *path;
+extern char *root;
 typedef struct response{
         int http_method; // 0 for get, 1 for Head, 2 for others(not supported)
             char *file_name;
