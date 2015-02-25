@@ -32,6 +32,7 @@ static char error_bad[] = {"HTTP/1.0 400 Bad Request\r\n"
     "Content-type: text/html\r\n\r\n"
     "<html><body>Error</body></html>\r\n\r\n"};
     */
+static char error_not_found[] = "HTTP/1.0 4.4 Page Not Found";
 static char error_unsupport[] = "HTTP/1.0 501 Method Unimplemented";
 static char server_info[] = "Server: Simple/1.0\r\n";
 static char ok_rsp[] = "HTTP/1.0 200 OK\r\n";
@@ -47,21 +48,13 @@ void parseRequest(int fd,char *request){
     strcpy(rsp.file_name,path);
     path_len = strlen(path);
     strcpy(rsp.file_name+path_len,default_page);
-    sendRsp(fd,rsp);
+    handleStatic(fd,rsp);
 }
-void sendRsp(int fd,HTTPRSP rsp){
+void sendRspHeader(int fd,HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
-    char file_buf[BUF_SIZE];
-    char *file_type;
-    int total_len=0,read_length=0;
     int total=0;
     int total_sent=0,bytes_sent=0;
-    int read_fd;
-    struct stat stat_buf;
-    if(rsp.http_method == HTTPOTHER){
-        send_error_rsp(fd);
-    }
-
+    char *file_type;
     strcpy(header,ok_rsp);
     total = strlen(header);
     strcpy(header+total,server_info);
@@ -83,12 +76,30 @@ void sendRsp(int fd,HTTPRSP rsp){
                 total_sent += bytes_sent;
             }
     }
+
+}
+void handleStatic(int fd,HTTPRSP rsp){
+    char file_buf[BUF_SIZE];
+    int total_len=0,read_length=0;
+    int read_fd;
+    struct stat stat_buf;
+    if(rsp.http_method == HTTPOTHER){
+        send_error_rsp(fd,error_unsupport);
+        return;
+    }
+    sendRspHeader(fd,rsp);
+
     if(rsp.http_method == HTTPHEAD){
         return;
     }    
     printf("file name %s\n",rsp.file_name);
+    
+    if(stat(rsp.file_name,&stat_buf) != 0){
+        send_error_rsp(fd,error_not_found);
+        return;
+    }
+    printf("read and send file %s\n",rsp.file_name);
     read_fd = open(rsp.file_name,O_RDONLY);
-    fstat(read_fd,&stat_buf);
     while(total_len < stat_buf.st_size){
        int total_send = 0;
        read_length = read(read_fd,file_buf,BUF_SIZE);
@@ -96,16 +107,41 @@ void sendRsp(int fd,HTTPRSP rsp){
        while(total_send < read_length){
            int send_len = 0;
            send_len = send(fd,file_buf+total_send,read_length-total_send,0);
-           if(send_len < 0){
+           if(send_len <= 0){
+               //there is some error occur or client close the connection
                break;
            }else{
                total_send += send_len;
            }
        }
     }
+    close(read_fd);
 
 }
-void send_error_rsp(int fd){
+void handleDyn(int fd,HTTPRSP rsp, char *args){
+    pid_t id=0;
+    int status;
+    if(rsp.http_method == HTTPOTHER){
+        send_error_rsp(fd,error_unsupport);
+        return;
+    }
+    sendRspHeader(fd,rsp);
+
+    if(rsp.http_method == HTTPHEAD){
+        return;
+    }    
+
+    printf("file name %s\n",rsp.file_name);
+    id = fork();
+    if(id == 0){
+        setenv("QUERY_STRING", args, 1);
+        dup2(fd, STDOUT_FILENO);
+        execve(rsp.file_name,NULL,NULL);
+    }else{
+        wait(&status);
+    }
+}
+void send_error_rsp(int fd,char *err){
     int len = 0;
     int total_send = 0;
     len = strlen(error_unsupport);
@@ -120,15 +156,3 @@ void send_error_rsp(int fd){
    }
 
 }
-void get_filetype(char *name, char *type) {
-        if (strstr(name, ".html"))
-            strcpy(type, "text/html");
-        else if (strstr(name, ".png"))
-            strcpy(type, "image/png");
-        else if (strstr(name, ".jpg"))
-            strcpy(type, "image/jpeg");
-        else if (strstr(name, ".gif"))
-            strcpy(type, "image/gif");
-        else
-            strcpy(type, "text/plain");
-};

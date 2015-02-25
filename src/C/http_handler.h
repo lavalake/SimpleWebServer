@@ -4,5 +4,7 @@ typedef struct response{
             char *file_name;
 } HTTPRSP;
 void parseRequest(int fd,char *request);
-void sendRsp(int fd,HTTPRSP rsp);
-void send_error_rsp(int fd);
+void handleStatic(int fd,HTTPRSP rsp);
+void handleDyn(int fd,HTTPRSP rsp,char *args);
+void sendRspHeader(int fd,HTTPRSP rsp);
+void send_error_rsp(int fd,char *err);
