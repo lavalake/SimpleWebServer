@@ -22,7 +22,7 @@
 #define URLLEN 200 //max URL length
 #define RSP_HEADER_LEN 65
 #define BUF_SIZE 1024
-static char default_page[] = "index.html";
+// static char default_page[] = "index.html";
 #define PATH "../reference/www/"
 /*
 static char error_bad[] = {"HTTP/1.0 400 Bad Request\r\n"
@@ -35,17 +35,42 @@ static char ok_rsp[] = "HTTP/1.0 200 OK\r\n";
 static char content_type[] = "Content-type: ";
 
 
-void parseRequest(int fd,char *request){
+void parseRequest(int fd, char *request){
 
     HTTPRSP rsp;
-    char path[]=PATH;
-    int path_len=0;
-    rsp.file_name = (char*)malloc(URLLEN);
-    strcpy(rsp.file_name,path);
-    path_len = strlen(path);
-    strcpy(rsp.file_name+path_len,default_page);
-    sendRsp(fd,rsp);
+
+    char method[BUF_SIZE], uri[BUF_SIZE];
+    char *buf = (char*) malloc(BUF_SIZE);
+    rsp.file_name = (char*) malloc(BUF_SIZE);
+
+    //split the request content by "\r\n"
+    buf = strtok(request, "\r\n");
+    printf("%s\n", buf);
+    sscanf(buf, "%s %s", method, uri);
+
+    if (strcasecmp(method, "GET")){
+      rsp.http_method = 0;
+    }
+    else if (strcasecmp(method, "HEAD")){
+      rsp.http_method = 1;
+    }
+    else{
+      //501 error
+      printf("%s\n", "501 Method Unimplemented");
+    }
+    
+    printf("%s\n", "printing out the method");
+    printf("%d\n", rsp.http_method);
+    printf("%s\n", "this is going to be the filename");
+    printf("%s\n", uri);
+
+
+    strcpy(rsp.file_name, uri);
+    
+    sendRsp(fd, rsp);
 }
+
+
 void sendRsp(int fd,HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
     char file_buf[BUF_SIZE];
