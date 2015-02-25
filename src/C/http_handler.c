@@ -32,8 +32,12 @@ static char error_bad[] = {"HTTP/1.0 400 Bad Request\r\n"
     "Content-type: text/html\r\n\r\n"
     "<html><body>Error</body></html>\r\n\r\n"};
     */
-static char error_not_found[] = "HTTP/1.0 4.4 Page Not Found";
-static char error_unsupport[] = "HTTP/1.0 501 Method Unimplemented";
+static char error_not_found[] = {"HTTP/1.0 4.4 Not Found"
+    "Content-type: text/html\r\n\r\n"
+    "<html><body>Page Not Found</body></html>\r\n\r\n"};
+static char error_unsupport[] = {"HTTP/1.0 501 Method Unimplemented"
+    "Content-type: text/html\r\n\r\n"
+    "<html><body>Unsupported HTTP Method</body></html>\r\n\r\n"};
 static char server_info[] = "Server: Simple/1.0\r\n";
 static char ok_rsp[] = "HTTP/1.0 200 OK\r\n";
 //static char content_len[] = "Content-length: ";
@@ -51,6 +55,9 @@ void parseRequest(int fd, char *request){
         printf("malloc failed\n");
     }
     rsp.file_name = (char*) malloc(BUF_SIZE);
+    if(rsp.file_name == NULL){
+        printf("malloc failed\n");
+    }
 
     //split the request content by "\r\n"
     buf = strtok(request, "\r\n");
@@ -145,6 +152,11 @@ void handleStatic(int fd,HTTPRSP rsp){
         send_error_rsp(fd,error_unsupport);
         return;
     }
+    if(stat(rsp.file_name,&stat_buf) != 0){
+        printf("file not exist\n");
+        send_error_rsp(fd,error_not_found);
+        return;
+    }
     sendRspHeader(fd,rsp);
 
 
@@ -154,11 +166,6 @@ void handleStatic(int fd,HTTPRSP rsp){
     }    
     //printf("file name %s\n",rsp.file_name);
     
-    if(stat(rsp.file_name,&stat_buf) != 0){
-        printf("file not exist\n");
-        send_error_rsp(fd,error_not_found);
-        return;
-    }
     printf("read and send file %s\n",rsp.file_name);
     read_fd = open(rsp.file_name,O_RDONLY);
     while(total_len < stat_buf.st_size){
