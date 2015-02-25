@@ -61,9 +61,10 @@ void parseRequest(int fd, char *request){
         rsp.http_method = 1;
     }
     else{
-      //501 error
-      printf("%s\n", "501 Method Unimplemented");
-      return;
+        //Not supported methods, return 501 error
+
+        printf("%s\n", "501 Method Unimplemented");
+        return;
     }
     
     printf("%s\n", "printing out the method");
@@ -100,14 +101,14 @@ void parseRequest(int fd, char *request){
 }
 
 
-void sendRspHeader(int fd,HTTPRSP rsp){
+void sendRspHeader(int fd, HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
     char *root;
     int path_len;
-    int total=0;
-    int total_sent=0,bytes_sent=0;
+    int total = 0;
+    int total_sent = 0, bytes_sent = 0;
     char *file_type;
-    strcpy(header,ok_rsp);
+    strcpy(header, ok_rsp);
     total = strlen(header);
     strcpy(header+total,server_info);
     total = strlen(header);
@@ -209,7 +210,7 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
         wait(&status);
     }
 }
-void send_error_rsp(int fd,char *err){
+void send_error_rsp(int fd, char *err){
     int len = 0;
     int total_send = 0;
     len = strlen(error_unsupport);
