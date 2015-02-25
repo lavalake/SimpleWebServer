@@ -47,6 +47,9 @@ void parseRequest(int fd, char *request){
 
 	  char method[BUF_SIZE], uri[BUF_SIZE];
     char *buf = (char*) malloc(BUF_SIZE);
+    if(buf == NULL){
+        printf("malloc failed\n");
+    }
     rsp.file_name = (char*) malloc(BUF_SIZE);
 
     //split the request content by "\r\n"
@@ -204,10 +207,10 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
 void send_error_rsp(int fd,char *err){
     int len = 0;
     int total_send = 0;
-    len = strlen(error_unsupport);
+    len = strlen(err);
    while(total_send < len){
        int send_len = 0;
-       send_len = send(fd,error_unsupport+total_send,len-total_send,0);
+       send_len = send(fd,err+total_send,len-total_send,0);
        if(send_len < 0){
            break;
        }else{
