@@ -65,10 +65,10 @@ void parseRequest(int fd, char *request){
       printf("%s\n", "501 Method Unimplemented");
     }
     
-    printf("%s\n", "printing out the method");
+    //printf("%s\n", "printing out the method");
     printf("%d\n", rsp.http_method);
-    printf("%s\n", "this is going to be the filename");
-    printf("%s\n", uri);
+    //printf("%s\n", "this is going to be the filename");
+    //printf("%s\n", uri);
 
     strcpy(rsp.file_name,path);
     path_len = strlen(path);
@@ -91,7 +91,7 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     total = strlen(header);
     strcpy(header+total,content_type);
     total = strlen(header);
-    printf("file name %s\n",rsp.file_name);
+    //printf("file name %s\n",rsp.file_name);
     path_len = strlen(path);
     if(strcmp(rsp.file_name,root) == 0){
         int path_len = strlen(path);
@@ -101,7 +101,7 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     }
     file_type = get_mime(rsp.file_name);
     
-    printf("file type %s\n",file_type);
+    //printf("file type %s\n",file_type);
     strcpy(header+total,file_type);
     total = strlen(header);
     strcpy(header+total,"\r\n");
@@ -121,7 +121,7 @@ void sendRspHeader(int fd,HTTPRSP rsp){
 */
     strcpy(header+total,"\r\n");
     total += 2;
-    printf("rsp header %s\n",header);
+    //printf("rsp header %s\n",header);
     while (total_sent < total) {
         bytes_sent = send(fd, header+ total_sent,total- total_sent, 0);
             if (bytes_sent <= 0) {
@@ -149,7 +149,7 @@ void handleStatic(int fd,HTTPRSP rsp){
         printf("http head, just return");
         return;
     }    
-    printf("file name %s\n",rsp.file_name);
+    //printf("file name %s\n",rsp.file_name);
     
     if(stat(rsp.file_name,&stat_buf) != 0){
         printf("file not exist\n");
@@ -161,7 +161,7 @@ void handleStatic(int fd,HTTPRSP rsp){
     while(total_len < stat_buf.st_size){
        int total_send = 0;
        read_length = read(read_fd,file_buf,BUF_SIZE);
-       printf("read %d from file\n",read_length);
+       //printf("read %d from file\n",read_length);
        total_len += read_length;
        while(total_send < read_length){
            int send_len = 0;
@@ -171,7 +171,7 @@ void handleStatic(int fd,HTTPRSP rsp){
                printf("send error\n");
                break;
            }else{
-               printf("send %d \n",send_len);
+               //printf("send %d \n",send_len);
                total_send += send_len;
            }
        }

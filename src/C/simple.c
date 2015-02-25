@@ -31,7 +31,7 @@
 #include "http_handler.h"
 #define ARGS_NUM 2
 #define MAX_LINE 128
-#define MAX_QUEUE_SIZE 100
+#define MAX_QUEUE_SIZE 50
 #define MAX_THREAD_NUM  10 
 char *path;
 char *root;
@@ -42,7 +42,8 @@ typedef struct queue{
     int front;
     int rear;
     pthread_mutex_t qmutex;
-    pthread_cond_t cond_var;
+    pthread_cond_t cond_null;
+    pthread_cond_t cond_full;
 
 } JOBQUEUE;
 JOBQUEUE jq;
@@ -52,7 +53,8 @@ void init(){
     jq.length = 0;
     jq.front=jq.rear=0;
     pthread_mutex_init(&jq.qmutex,NULL);
-    pthread_cond_init(&jq.cond_var,NULL);
+    pthread_cond_init(&jq.cond_null,NULL);
+    pthread_cond_init(&jq.cond_full,NULL);
     for(i=0;i<MAX_THREAD_NUM;i++){
         if(pthread_create(&tid[i],NULL,(void*)handle_conn,&tid[i]) < 0)
             fprintf(stdout,"pthread create error \n");
@@ -80,11 +82,13 @@ void handle_conn(void *input){
     printf("thread %d run\n", *(int*)input);
     while(1){
         pthread_mutex_lock(&jq.qmutex);
+        printf("thread %d,q %d\n",*(int*)input,jq.length);
         while(jq.length <=0 ){
             printf("emty q, waiting %d\n", *(int*)input);
-            pthread_cond_wait(&jq.cond_var,&jq.qmutex);
+            pthread_cond_wait(&jq.cond_null,&jq.qmutex);
         }
         client_sock = deQueue();
+        pthread_cond_signal(&jq.cond_full);
         printf("working thread %d fd %d\n", *(int*)input, client_sock);
         pthread_mutex_unlock(&jq.qmutex);
         FD_ZERO(&read_set);
@@ -243,13 +247,13 @@ int main(int argc, char **argv)
                   client_addr_string, INET_ADDRSTRLEN);
         debug_log("Accepted connection from %s:%d",
                   client_addr_string, ntohs(client_addr.sin_port));
-        printf("put socket %d to q\n",client_sock);
         pthread_mutex_lock(&jq.qmutex);
+        printf("put socket %d to q, %d\n",client_sock,jq.length);
         while(jq.length == MAX_QUEUE_SIZE){
-            pthread_cond_wait(&jq.cond_var,&jq.qmutex);
+            pthread_cond_wait(&jq.cond_full,&jq.qmutex);
         }
         enQueue(client_sock);
-        pthread_cond_signal(&jq.cond_var);
+        pthread_cond_signal(&jq.cond_null);
         pthread_mutex_unlock(&jq.qmutex);
     }
     return 0;
