@@ -56,25 +56,43 @@ void parseRequest(int fd, char *request){
     sscanf(buf, "%s %s", method, uri);
 
     if (strcasecmp(method, "GET")){
-      rsp.http_method = 0;
+        rsp.http_method = 0;
     }
     else if (strcasecmp(method, "HEAD")){
-      rsp.http_method = 1;
+        rsp.http_method = 1;
     }
     else{
       //501 error
       printf("%s\n", "501 Method Unimplemented");
+      return;
     }
     
     printf("%s\n", "printing out the method");
     printf("%d\n", rsp.http_method);
     printf("%s\n", "this is going to be the filename");
     printf("%s\n", uri);
-
-
-    strcpy(rsp.file_name, uri);
     
-    handleStatic(fd, rsp);
+    //parse URI from request to determine static status or cgi
+    char *index = NULL; 
+    char *cgiargs = NULL;
+    if (strstr(uri, "cgi-bin")){
+        //Dynamic cgi content
+        printf("%s\n", "dynamic content");
+        index = strchr(uri, '?');
+        if (index)
+            strcpy(cgiargs, index + 1);        
+        else
+            strcpy(cgiargs, "");
+        strcpy(rsp.file_name, uri);
+        handleDyn(fd, rsp, cgiargs);
+    }
+    else{
+        //static content
+        printf("%s\n", "static content");
+        strcpy(rsp.file_name, uri);
+        handleStatic(fd, rsp);
+    }
+    
 }
 
 
