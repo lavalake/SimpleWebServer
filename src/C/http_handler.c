@@ -21,7 +21,7 @@
 #include "http_handler.h"
 #include <helper.h>
 #define URLLEN 200 //max URL length
-#define RSP_HEADER_LEN 65
+#define RSP_HEADER_LEN 650
 #define BUF_SIZE 4096
 static char default_page[] = "/index.html";
 #define HTTPGET 0
@@ -80,7 +80,6 @@ void parseRequest(int fd, char *request){
 
 void sendRspHeader(int fd,HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
-    char *root;
     int path_len;
     int total=0;
     int total_sent=0,bytes_sent=0;
@@ -94,9 +93,6 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     total = strlen(header);
     printf("file name %s\n",rsp.file_name);
     path_len = strlen(path);
-    root = (char*) malloc(path_len+2);
-    strcpy(root,path);
-    strcpy(root+path_len,"/"); 
     if(strcmp(rsp.file_name,root) == 0){
         int path_len = strlen(path);
         strcpy(rsp.file_name,path);
@@ -135,6 +131,7 @@ void sendRspHeader(int fd,HTTPRSP rsp){
             }
     }
 
+    printf("send header finished\n");
 }
 void handleStatic(int fd,HTTPRSP rsp){
     char file_buf[BUF_SIZE];
@@ -146,6 +143,7 @@ void handleStatic(int fd,HTTPRSP rsp){
         return;
     }
     sendRspHeader(fd,rsp);
+
 
     if(rsp.http_method == HTTPHEAD){
         printf("http head, just return");
