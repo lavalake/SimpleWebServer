@@ -71,11 +71,12 @@ void parseRequest(int fd, char *request){
     }
     else if (strcasecmp(method, "HEAD") == 0){
       rsp.http_method = 1;
-      return;
     }
     else{
       //501 error
       printf("%s\n", "501 Method Unimplemented");
+      send_error_rsp(fd,error_unsupport);
+      return;
     }
     
     //printf("%s\n", "printing out the method");
@@ -93,12 +94,10 @@ void parseRequest(int fd, char *request){
             if (index){
                     strcpy(cgiargs, index + 1);
                     *index = '\0';
-                    strcpy(rsp.file_name+path_len,uri);
-                    printf("cgi file %s\n",rsp.file_name);
-                    printf("cgi para %s\n",cgiargs);
                 }
                 else
                     strcpy(cgiargs, "");
+                strcpy(rsp.file_name + path_len, uri);
                 handleDyn(fd, rsp, cgiargs);
             }
     else{
@@ -141,19 +140,6 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     total = strlen(header);
     strcpy(header+total,"\r\n");
     total += 2;
-    /*
-    if(stat(rsp.file_name,&stat_buf) == 0){
-        char str[100];
-        sprintf(str, " %d" , (int)stat_buf.st_size);
-        strcpy(header+total,content_len);
-        total = strlen(header);
-        strcpy(header+total,str);
-        total = strlen(header);
-        strcpy(header+total,"\r\n");
-        total += 2;
-        printf("conten len %s\n",str);
-    }
-*/
     strcpy(header+total,"\r\n");
     total += 2;
     //printf("rsp header %s\n",header);
@@ -166,7 +152,7 @@ void sendRspHeader(int fd,HTTPRSP rsp){
             }
     }
 
-    printf("send header finished\n");
+    printf("send header finished %s\n",header);
 }
 void handleStatic(int fd,HTTPRSP rsp){
     char file_buf[BUF_SIZE];
@@ -178,7 +164,7 @@ void handleStatic(int fd,HTTPRSP rsp){
         return;
     }
     if(stat(rsp.file_name,&stat_buf) != 0){
-        printf("file not exist %s\n",rsp.file_name);
+        printf("file not exist\n");
         send_error_rsp(fd,error_not_found);
         return;
     }
@@ -216,22 +202,15 @@ void handleStatic(int fd,HTTPRSP rsp){
 void handleDyn(int fd,HTTPRSP rsp, char *args){
     pid_t id=0;
     int status;
-    struct stat stat_buf;
     char *querystr = "QUERY_STRING=";
     char *entry = malloc(strlen(querystr)+strlen(args)+1);
     if(rsp.http_method == HTTPOTHER){
         send_error_rsp(fd,error_unsupport);
         return;
     }
-    if(stat(rsp.file_name,&stat_buf) != 0){
-        printf("file not exist %s\n",rsp.file_name);
-        send_error_rsp(fd,error_not_found);
-        return;
-    }
-    //sendRspHeader(fd,rsp);
+    sendRspHeader(fd,rsp);
 
     if(rsp.http_method == HTTPHEAD){
-        printf("head return\n");
         return;
     }    
 
@@ -244,12 +223,10 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
         env[0] = entry;
         env[1] = NULL;
         setenv("QUERY_STRING", args, 1);
-        printf("exec %s\n",rsp.file_name);
         dup2(fd, STDOUT_FILENO);
         execve(rsp.file_name,NULL,env);
     }else{
         wait(&status);
-        free(entry);
     }
 }
 void send_error_rsp(int fd,char *err){

@@ -110,7 +110,7 @@ void handle_conn(void *input){
         pthread_mutex_unlock(&jq.qmutex);
         FD_ZERO(&read_set);
         FD_SET(client_sock,&read_set);
-        t.tv_sec = 5;
+        t.tv_sec = 10;
         t.tv_usec = 0;
         result = select(client_sock+1, &read_set, NULL, NULL, &t);
         if(result > 0){
@@ -140,7 +140,6 @@ int main(int argc, char **argv)
     int port;
     int serv_sock, client_sock;
     int optval = 1;
-    int bytes_received, bytes_sent, total_sent;
 
     socklen_t len;
     struct sockaddr_in addr, client_addr;
@@ -222,7 +221,6 @@ int main(int argc, char **argv)
     debug_log("Now listening on port %d", port);
     printf("Now listening on port %d\n",port);
     while(1) {
-        total_sent = bytes_received = bytes_sent = 0;
         /* Accept the client connection  */
         len = sizeof(client_addr);
 
