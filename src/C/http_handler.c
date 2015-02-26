@@ -54,15 +54,10 @@ void parseRequest(int fd, char *request){
         printf("null http request\n");
         return;
     }
-    char *buf = (char*) malloc(BUF_SIZE);
-    if(buf == NULL){
-        printf("malloc failed\n");
-        return;
-    }
+    char *buf =NULL;
     rsp.file_name = (char*) malloc(BUF_SIZE);
     if(rsp.file_name == NULL){
         printf("malloc failed\n");
-        free(buf);
         return;
     }
 
@@ -92,6 +87,8 @@ void parseRequest(int fd, char *request){
     strcpy(rsp.file_name+path_len, uri);
     
     handleStatic(fd, rsp);
+    printf("free file name\n");
+    free(rsp.file_name);
 }
 
 
@@ -162,7 +159,6 @@ void handleStatic(int fd,HTTPRSP rsp){
     if(stat(rsp.file_name,&stat_buf) != 0){
         printf("file not exist\n");
         send_error_rsp(fd,error_not_found);
-        free(rsp.file_name);
         return;
     }
     sendRspHeader(fd,rsp);
@@ -194,13 +190,13 @@ void handleStatic(int fd,HTTPRSP rsp){
            }
        }
     }
-    close(read_fd);
-    free(rsp.file_name);
 
 }
 void handleDyn(int fd,HTTPRSP rsp, char *args){
     pid_t id=0;
     int status;
+    char *querystr = "QUERY_STRING=";
+    char *entry = malloc(strlen(querystr)+strlen(args)+1);
     if(rsp.http_method == HTTPOTHER){
         send_error_rsp(fd,error_unsupport);
         return;
@@ -214,9 +210,14 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
     printf("file name %s\n",rsp.file_name);
     id = fork();
     if(id == 0){
+        char *env[2];
+        strcpy(entry,querystr);
+        strcat(entry,args);
+        env[0] = entry;
+        env[1] = NULL;
         setenv("QUERY_STRING", args, 1);
         dup2(fd, STDOUT_FILENO);
-        execve(rsp.file_name,NULL,NULL);
+        execve(rsp.file_name,NULL,env);
     }else{
         wait(&status);
     }
