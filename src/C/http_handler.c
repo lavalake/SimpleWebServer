@@ -93,10 +93,12 @@ void parseRequest(int fd, char *request){
             if (index){
                     strcpy(cgiargs, index + 1);
                     *index = '\0';
+                    strcpy(rsp.file_name+path_len,uri);
+                    printf("cgi file %s\n",rsp.file_name);
+                    printf("cgi para %s\n",cgiargs);
                 }
                 else
                     strcpy(cgiargs, "");
-                strcpy(rsp.file_name + path_len, uri);
                 handleDyn(fd, rsp, cgiargs);
             }
     else{
@@ -214,15 +216,22 @@ void handleStatic(int fd,HTTPRSP rsp){
 void handleDyn(int fd,HTTPRSP rsp, char *args){
     pid_t id=0;
     int status;
+    struct stat stat_buf;
     char *querystr = "QUERY_STRING=";
     char *entry = malloc(strlen(querystr)+strlen(args)+1);
     if(rsp.http_method == HTTPOTHER){
         send_error_rsp(fd,error_unsupport);
         return;
     }
-    sendRspHeader(fd,rsp);
+    if(stat(rsp.file_name,&stat_buf) != 0){
+        printf("file not exist %s\n",rsp.file_name);
+        send_error_rsp(fd,error_not_found);
+        return;
+    }
+    //sendRspHeader(fd,rsp);
 
     if(rsp.http_method == HTTPHEAD){
+        printf("head return\n");
         return;
     }    
 
@@ -235,6 +244,7 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
         env[0] = entry;
         env[1] = NULL;
         setenv("QUERY_STRING", args, 1);
+        printf("exec %s\n",rsp.file_name);
         dup2(fd, STDOUT_FILENO);
         execve(rsp.file_name,NULL,env);
     }else{
