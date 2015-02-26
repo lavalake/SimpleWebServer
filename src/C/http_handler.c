@@ -69,8 +69,9 @@ void parseRequest(int fd, char *request){
     if (strcasecmp(method, "GET") == 0){
       rsp.http_method = 0;
     }
-    else if (strcasecmp(method, "HEAD")){
+    else if (strcasecmp(method, "HEAD") == 0){
       rsp.http_method = 1;
+      return;
     }
     else{
       //501 error
@@ -81,12 +82,30 @@ void parseRequest(int fd, char *request){
     printf("%d\n", rsp.http_method);
     //printf("%s\n", "this is going to be the filename");
     //printf("%s\n", uri);
-
+    char *index; 
+    char cgiargs[BUF_SIZE];
     strcpy(rsp.file_name,path);
     path_len = strlen(path);
-    strcpy(rsp.file_name+path_len, uri);
-    
-    handleStatic(fd, rsp);
+    if (strstr(uri, "cgi-bin")){
+            //Dynamic cgi content
+            printf("%s\n", "dynamic content");
+            index = strchr(uri, '?');
+            if (index){
+                    strcpy(cgiargs, index + 1);
+                    *index = '\0';
+                }
+                else
+                    strcpy(cgiargs, "");
+                strcpy(rsp.file_name + path_len, uri);
+                handleDyn(fd, rsp, cgiargs);
+            }
+    else{
+            //static content
+            printf("%s\n", "static content");
+            strcpy(rsp.file_name + path_len, uri);
+            handleStatic(fd, rsp);
+    }
+
     printf("free file name\n");
     free(rsp.file_name);
 }
@@ -157,7 +176,7 @@ void handleStatic(int fd,HTTPRSP rsp){
         return;
     }
     if(stat(rsp.file_name,&stat_buf) != 0){
-        printf("file not exist\n");
+        printf("file not exist %s\n",rsp.file_name);
         send_error_rsp(fd,error_not_found);
         return;
     }
