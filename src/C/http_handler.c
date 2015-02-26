@@ -249,6 +249,7 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
         execve(rsp.file_name,NULL,env);
     }else{
         wait(&status);
+        free(entry);
     }
 }
 void send_error_rsp(int fd,char *err){

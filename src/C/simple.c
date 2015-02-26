@@ -1,12 +1,14 @@
-/**
- * @file   server.c
- * @author Chinmay Kamat <chinmaykamat@cmu.edu>
- * @date   Fri, 15 February 2013 04:59:59 EST
- *
- * @brief A simple echo server
- *
- */
-
+/* simple.c
+* Author: jian wang xunrong li
+* Date: 24 Feb, 2015
+* This is a simple web server.The main process will 
+* create a thread pool of 10 and pending on a working queue
+* whenver the main process receive a TCP request, it will put
+* the socke file descriptor into the working queue and wake up
+* one working thread.
+* We create thread pool to save the effor to create thread for
+* every tcp connection. 
+*/
 /* Standard includes */
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,11 +33,14 @@
 #include "http_handler.h"
 #define ARGS_NUM 2
 #define MAX_LINE 128
-#define MAX_QUEUE_SIZE 50
-#define MAX_THREAD_NUM  10 
+#define MAX_QUEUE_SIZE 50 //the queue size for the tcp connection
+#define MAX_THREAD_NUM  10 //number of working thread
 char *path;
 char *root;
 void handle_conn(void*);
+//queue for the incoming tcp connection
+//main process will put connection into queue
+//working thread will take socket fd from queue
 typedef struct queue{
     int socket_fd[MAX_QUEUE_SIZE];
     int length;
@@ -48,6 +53,10 @@ typedef struct queue{
 } JOBQUEUE;
 JOBQUEUE jq;
 pthread_t tid[MAX_THREAD_NUM];
+/*init()
+ * initialze the mutex and conditional veriable and 
+ * create the working thread pool
+ */
 void init(){
     int i=0;
     jq.length = 0;
@@ -72,6 +81,12 @@ int deQueue(){
     jq.length--;
     return fd;
 }
+/*handle_conn
+ * the entry for working thread.
+ * It will use select to wait for incoming data. 5 seconds
+ * time out is set for select. The purpose of this timeout is
+ * to defence the DOS attack.
+ */
 void handle_conn(void *input){
     int bytes_received=0;
     char buffer[MAX_LINE];
@@ -83,6 +98,8 @@ void handle_conn(void *input){
     while(1){
         pthread_mutex_lock(&jq.qmutex);
         printf("thread %d,q %d\n",*(int*)input,jq.length);
+        //if the queue is empty, we need to wait for main process
+        //put new connection into the queue
         while(jq.length <=0 ){
             printf("emty q, waiting %d\n", *(int*)input);
             pthread_cond_wait(&jq.cond_null,&jq.qmutex);
@@ -106,31 +123,11 @@ void handle_conn(void *input){
                 *(int*)input, client_sock );
             /* Our work here is done. Close the connection to the client */
             close(client_sock);
+            continue;
         }
-
         
-        /*
-         * Echo - Write (send) the data back to the client taking care of short
-         * counts
-         */
-        /*
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
-            printf("thread %d Read from client %d -- %s\n",
-                   *(int*)input, client_sock, buffer);
-            while (total_sent != bytes_received) {
-                bytes_sent = send(client_sock, buffer + total_sent,
-                                  bytes_received - total_sent, 0);
-                if (bytes_sent <= 0) {
-                    break;
-                } else {
-                    total_sent += bytes_sent;
-                }
-            }
-        }
-        */
         buffer[bytes_received] = '\0';
-        printf("parse http request\n");
+        //printf("parse http request\n");
         parseRequest(client_sock,buffer);
         printf("thead %d Closing connection %d",
             *(int*)input, client_sock );
@@ -158,10 +155,11 @@ int main(int argc, char **argv)
 
     if (argc != (ARGS_NUM + 1)) {
         error_log("%s","Incorrect arguments provided\n"
-                  "usage: ./server <port>");
+                  "usage: ./server <port> <root folder>");
 
         exit(EXIT_FAILURE);
     }
+
     init();
 
     client_addr_string = (char *) malloc(INET_ADDRSTRLEN);
