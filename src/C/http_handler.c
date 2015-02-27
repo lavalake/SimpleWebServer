@@ -27,11 +27,7 @@ static char default_page[] = "/index.html";
 #define HTTPGET 0
 #define HTTPHEAD 1
 #define HTTPOTHER 2
-/*
-static char error_bad[] = {"HTTP/1.0 400 Bad Request\r\n"
-    "Content-type: text/html\r\n\r\n"
-    "<html><body>Error</body></html>\r\n\r\n"};
-    */
+
 static char error_not_found[] = {"HTTP/1.0 404 Not Found"
     "Content-type: text/html\r\n\r\n"
     "<html><body>Page Not Found</body></html>\r\n\r\n"};
@@ -40,7 +36,6 @@ static char error_unsupport[] = {"HTTP/1.0 501 Method Unimplemented"
     "<html><body>Unsupported HTTP Method</body></html>\r\n\r\n"};
 static char server_info[] = "Server: Simple/1.0\r\n";
 static char ok_rsp[] = "HTTP/1.0 200 OK\r\n";
-//static char content_len[] = "Content-length: ";
 static char content_type[] = "Content-type: ";
 
 
@@ -71,48 +66,46 @@ void parseRequest(int fd, char *request){
     }
     else if (strcasecmp(method, "HEAD") == 0){
       rsp.http_method = 1;
-      return;
     }
     else{
       //501 error
       printf("%s\n", "501 Method Unimplemented");
+      send_error_rsp(fd,error_unsupport);
+      return;
     }
     
-    //printf("%s\n", "printing out the method");
     printf("%d\n", rsp.http_method);
-    //printf("%s\n", "this is going to be the filename");
-    //printf("%s\n", uri);
     char *index; 
     char cgiargs[BUF_SIZE];
     strcpy(rsp.file_name,path);
     path_len = strlen(path);
     if (strstr(uri, "cgi-bin")){
-            //Dynamic cgi content
-            printf("%s\n", "dynamic content");
-            index = strchr(uri, '?');
-            if (index){
-                    strcpy(cgiargs, index + 1);
-                    *index = '\0';
-                    strcpy(rsp.file_name+path_len,uri);
-                    printf("cgi file %s\n",rsp.file_name);
-                    printf("cgi para %s\n",cgiargs);
-                }
-                else
-                    strcpy(cgiargs, "");
-                handleDyn(fd, rsp, cgiargs);
+        //Dynamic cgi content
+        printf("%s\n", "dynamic content");
+        index = strchr(uri, '?');
+        if (index){
+                strcpy(cgiargs, index + 1);
+                *index = '\0';
             }
-    else{
-            //static content
-            printf("%s\n", "static content");
+            else
+                strcpy(cgiargs, "");
             strcpy(rsp.file_name + path_len, uri);
-            handleStatic(fd, rsp);
+            handleDyn(fd, rsp, cgiargs);
+    }
+    else{
+        //static content
+        printf("%s\n", "static content");
+        strcpy(rsp.file_name + path_len, uri);
+        handleStatic(fd, rsp);
     }
 
     printf("free file name\n");
     free(rsp.file_name);
 }
 
-
+/*sendRspHeander
+ * send the HTTP Resonse Header
+ */
 void sendRspHeader(int fd,HTTPRSP rsp){
     char header[RSP_HEADER_LEN];
     int path_len;
@@ -136,27 +129,12 @@ void sendRspHeader(int fd,HTTPRSP rsp){
     }
     file_type = get_mime(rsp.file_name);
     
-    //printf("file type %s\n",file_type);
     strcpy(header+total,file_type);
     total = strlen(header);
     strcpy(header+total,"\r\n");
     total += 2;
-    /*
-    if(stat(rsp.file_name,&stat_buf) == 0){
-        char str[100];
-        sprintf(str, " %d" , (int)stat_buf.st_size);
-        strcpy(header+total,content_len);
-        total = strlen(header);
-        strcpy(header+total,str);
-        total = strlen(header);
-        strcpy(header+total,"\r\n");
-        total += 2;
-        printf("conten len %s\n",str);
-    }
-*/
     strcpy(header+total,"\r\n");
     total += 2;
-    //printf("rsp header %s\n",header);
     while (total_sent < total) {
         bytes_sent = send(fd, header+ total_sent,total- total_sent, 0);
             if (bytes_sent <= 0) {
@@ -166,8 +144,11 @@ void sendRspHeader(int fd,HTTPRSP rsp){
             }
     }
 
-    printf("send header finished\n");
+    printf("send header finished %s\n",header);
 }
+/*handleStatic
+ * Handle Static HTTP Request. Only support GET and HEAD
+ */
 void handleStatic(int fd,HTTPRSP rsp){
     char file_buf[BUF_SIZE];
     int total_len=0,read_length=0;
@@ -178,7 +159,7 @@ void handleStatic(int fd,HTTPRSP rsp){
         return;
     }
     if(stat(rsp.file_name,&stat_buf) != 0){
-        printf("file not exist %s\n",rsp.file_name);
+        printf("file not exist\n");
         send_error_rsp(fd,error_not_found);
         return;
     }
@@ -189,14 +170,12 @@ void handleStatic(int fd,HTTPRSP rsp){
         printf("http head, just return");
         return;
     }    
-    //printf("file name %s\n",rsp.file_name);
     
     printf("read and send file %s\n",rsp.file_name);
     read_fd = open(rsp.file_name,O_RDONLY);
     while(total_len < stat_buf.st_size){
        int total_send = 0;
        read_length = read(read_fd,file_buf,BUF_SIZE);
-       //printf("read %d from file\n",read_length);
        total_len += read_length;
        while(total_send < read_length){
            int send_len = 0;
@@ -211,27 +190,26 @@ void handleStatic(int fd,HTTPRSP rsp){
            }
        }
     }
+    close(read_fd);
 
 }
+/*hanleDyn()
+ * Handle CGI Request. Need fork() a new process and put
+ * the args to env.Then redirect the std out to socket
+ *
+ */
 void handleDyn(int fd,HTTPRSP rsp, char *args){
     pid_t id=0;
     int status;
-    struct stat stat_buf;
     char *querystr = "QUERY_STRING=";
     char *entry = malloc(strlen(querystr)+strlen(args)+1);
     if(rsp.http_method == HTTPOTHER){
         send_error_rsp(fd,error_unsupport);
         return;
     }
-    if(stat(rsp.file_name,&stat_buf) != 0){
-        printf("file not exist %s\n",rsp.file_name);
-        send_error_rsp(fd,error_not_found);
-        return;
-    }
-    //sendRspHeader(fd,rsp);
+    sendRspHeader(fd,rsp);
 
     if(rsp.http_method == HTTPHEAD){
-        printf("head return\n");
         return;
     }    
 
@@ -244,7 +222,6 @@ void handleDyn(int fd,HTTPRSP rsp, char *args){
         env[0] = entry;
         env[1] = NULL;
         setenv("QUERY_STRING", args, 1);
-        printf("exec %s\n",rsp.file_name);
         dup2(fd, STDOUT_FILENO);
         execve(rsp.file_name,NULL,env);
     }else{
