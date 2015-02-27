@@ -8,7 +8,6 @@ default: getmime simple
 getmime: getmime.c helper.c
 simple: simple.c http_handler.c helper.c
 
-
 debug: CFLAGS = -g -Wall -Werror -DDEBUG -DLOG_LEVEL=2 -I ./inc
 debug: getmime server client
 
