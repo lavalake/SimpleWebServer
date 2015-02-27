@@ -11,12 +11,13 @@ def random_str(randomlength=8):
         str+=chars[random.randint(0, length)]
     return str
 
-if (len(sys.argv) != 2):
-	print "Please input the argument as <port_number> <filename>"
+if (len(sys.argv) != 3):
+	print "Please input the argument as <port_number> <server_address>"
 	sys.exit(1)
 
 # get the argument from command input
 port_number = sys.argv[1]
+server_address = sys.argv[2]
 # path = argv[1]
 
 # test filename 
@@ -29,7 +30,7 @@ if port_number.isdigit():
 	port_number = int(port_number)
 	if port_number < 65535 and port_number > 1024:
 		
-		conn = httplib.HTTPConnection("128.237.209.204", port_number, timeout = 30)
+		conn = httplib.HTTPConnection(server_address, port_number, timeout = 30)
 
 		print "-------------------------------"
 		print "sending get http request"
