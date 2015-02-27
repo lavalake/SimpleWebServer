@@ -58,26 +58,26 @@ pthread_t tid[MAX_THREAD_NUM];
  * create the working thread pool
  */
 void init(){
-    int i=0;
+    int i = 0;
     jq.length = 0;
-    jq.front=jq.rear=0;
-    pthread_mutex_init(&jq.qmutex,NULL);
-    pthread_cond_init(&jq.cond_null,NULL);
-    pthread_cond_init(&jq.cond_full,NULL);
-    for(i=0;i<MAX_THREAD_NUM;i++){
-        if(pthread_create(&tid[i],NULL,(void*)handle_conn,&tid[i]) < 0)
-            fprintf(stdout,"pthread create error \n");
+    jq.front = jq.rear = 0;
+    pthread_mutex_init(&jq.qmutex, NULL);
+    pthread_cond_init(&jq.cond_null, NULL);
+    pthread_cond_init(&jq.cond_full, NULL);
+    for(i = 0; i < MAX_THREAD_NUM; i++){
+        if(pthread_create(&tid[i], NULL, (void*)handle_conn, &tid[i]) < 0)
+            fprintf(stdout, "pthread create error \n");
     }
 
 }
 void enQueue(int fd){
     jq.socket_fd[jq.rear] = fd;
-    jq.rear = (jq.rear+1)%MAX_QUEUE_SIZE;
+    jq.rear = (jq.rear + 1) % MAX_QUEUE_SIZE;
     jq.length++;
 }
 int deQueue(){
     int fd = jq.socket_fd[jq.front];
-    jq.front = (jq.front+1)%MAX_QUEUE_SIZE;
+    jq.front = (jq.front + 1) % MAX_QUEUE_SIZE;
     jq.length--;
     return fd;
 }
@@ -88,37 +88,37 @@ int deQueue(){
  * to defence the DOS attack.
  */
 void handle_conn(void *input){
-    int bytes_received=0;
+    int bytes_received = 0;
     char buffer[MAX_LINE];
-    int client_sock=0;
+    int client_sock = 0;
     fd_set read_set;
     struct timeval t;
     int result;
     printf("thread %d run\n", *(int*)input);
     while(1){
         pthread_mutex_lock(&jq.qmutex);
-        printf("thread %d,q %d\n",*(int*)input,jq.length);
+        printf("thread %d,q %d\n", *(int*)input, jq.length);
         //if the queue is empty, we need to wait for main process
         //put new connection into the queue
-        while(jq.length <=0 ){
+        while(jq.length <= 0){
             printf("emty q, waiting %d\n", *(int*)input);
-            pthread_cond_wait(&jq.cond_null,&jq.qmutex);
+            pthread_cond_wait(&jq.cond_null, &jq.qmutex);
         }
         client_sock = deQueue();
         pthread_cond_signal(&jq.cond_full);
         printf("working thread %d fd %d\n", *(int*)input, client_sock);
         pthread_mutex_unlock(&jq.qmutex);
         FD_ZERO(&read_set);
-        FD_SET(client_sock,&read_set);
+        FD_SET(client_sock, &read_set);
         t.tv_sec = 10;
         t.tv_usec = 0;
-        result = select(client_sock+1, &read_set, NULL, NULL, &t);
+        result = select(client_sock + 1, &read_set, NULL, NULL, &t);
         if(result > 0){
             if(FD_ISSET(client_sock, &read_set)){
                 bytes_received = recv(client_sock, buffer, MAX_LINE - 1, 0);
             }
-        }else{
-            
+        }
+        else{    
             printf("thead %d select timeout Closing connection %d",
                 *(int*)input, client_sock );
             /* Our work here is done. Close the connection to the client */
@@ -128,7 +128,7 @@ void handle_conn(void *input){
         
         buffer[bytes_received] = '\0';
         //printf("parse http request\n");
-        parseRequest(client_sock,buffer);
+        parseRequest(client_sock, buffer);
         printf("thead %d Closing connection %d",
             *(int*)input, client_sock );
         /* Our work here is done. Close the connection to the client */
@@ -175,9 +175,9 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
     path = argv[2];
-    root = (char*)malloc(strlen(path)+1);
-    strcpy(root,path);
-    strcpy(root+strlen(root),"/");
+    root = (char*)malloc(strlen(path) + 1);
+    strcpy(root, path);
+    strcpy(root + strlen(root),"/");
 
     /* Create a socket for listening */
     if ((serv_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
     }
 
     debug_log("Now listening on port %d", port);
-    printf("Now listening on port %d\n",port);
+    printf("Now listening on port %d\n", port);
     while(1) {
         /* Accept the client connection  */
         len = sizeof(client_addr);
