@@ -2,11 +2,15 @@
 import threading
 import time
 import httplib
+import sys
 
+if (len(sys.argv) != 3):
+    print "Please input the argument as <port_number> <server_address>"
+    sys.exit(1)
 # host address
-HOST = "128.237.209.204"
+HOST = sys.argv[2]
 # port number
-PORT = 12121
+PORT = sys.argv[1]
 # test URI
 URI = "/index.html"
 # total connection number
@@ -17,7 +21,6 @@ SUCC = 0
 FAIL = 0
 # exception connection number
 EXCEPT = 0
-
 
 class RequestThread(threading.Thread):
 
