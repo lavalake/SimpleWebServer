@@ -114,8 +114,10 @@ void handle_conn(void *input){
         t.tv_usec = 0;
         result = select(client_sock + 1, &read_set, NULL, NULL, &t);
         if(result > 0){
+            printf("socket incoming data\n");
             if(FD_ISSET(client_sock, &read_set)){
                 bytes_received = recv(client_sock, buffer, MAX_LINE - 1, 0);
+                printf("socket recv data %d\n",bytes_received);
             }
         }
         else{    
@@ -125,10 +127,11 @@ void handle_conn(void *input){
             close(client_sock);
             continue;
         }
-        
-        buffer[bytes_received] = '\0';
-        //printf("parse http request\n");
-        parseRequest(client_sock, buffer);
+        if(bytes_received != 0){ 
+            buffer[bytes_received] = '\0';
+            printf("parse http request\n");
+            parseRequest(client_sock, buffer);
+        }
         printf("thead %d Closing connection %d",
             *(int*)input, client_sock );
         /* Our work here is done. Close the connection to the client */
